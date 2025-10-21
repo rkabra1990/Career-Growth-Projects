@@ -1,6 +1,7 @@
 package com.agenticai.stock.agent;
 
 import com.agenticai.stock.model.*;
+import com.agenticai.stock.service.BrokerService;
 import com.agenticai.stock.service.MarketDataService;
 import com.agenticai.stock.service.ProfitabilityTracker;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,10 +15,12 @@ public class TraderAgent implements BaseAgent {
     private final ProfitabilityTracker tracker = new ProfitabilityTracker();
 
     private final MarketDataService marketDataService;
+    private final BrokerService brokerService;
 
     @Autowired
-    public TraderAgent(MarketDataService marketDataService) {
+    public TraderAgent(MarketDataService marketDataService,BrokerService brokerService) {
         this.marketDataService = marketDataService;
+        this.brokerService = brokerService;
     }
 
     @Override
@@ -55,11 +58,29 @@ public class TraderAgent implements BaseAgent {
 
     @Override
     public Action act(Plan plan) {
-        if (plan.decision().equals("SELL")) {
-            double buy = 1500.00, sell = 1515.00;
-            double profit = sell - buy;
-            tracker.recordTrade(new TradeResult("HDFCBANK", buy, sell, profit, profit > 0, LocalDateTime.now()));
+        String symbol = "HDFCBANK";
+        double price = 1500.00; // mock for now
+        int quantity = 10;
+
+        if (plan.decision().equals("BUY") || plan.decision().equals("SELL")) {
+            // ✅ Create TradeOrder for broker
+            TradeOrder order = new TradeOrder(
+                    symbol,
+                    plan.decision(),
+                    quantity,
+                    price,
+                    LocalDateTime.now(),
+                    "ORD-" + System.currentTimeMillis()
+            );
+
+            // ✅ Execute via BrokerService
+            brokerService.placeOrder(order);
+
+            // ✅ Log profit simulation for learning
+            double profit = plan.decision().equals("SELL") ? 15.00 : 0.0;
+            tracker.recordTrade(new TradeResult(symbol, 1500.00, 1515.00, profit, profit > 0, LocalDateTime.now()));
         }
+
         return new Action(plan.decision(), true);
     }
 
