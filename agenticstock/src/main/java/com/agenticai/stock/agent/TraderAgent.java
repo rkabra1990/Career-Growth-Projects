@@ -1,38 +1,37 @@
 package com.agenticai.stock.agent;
 
 import com.agenticai.stock.model.*;
+import com.agenticai.stock.service.ProfitabilityTracker;
+
+import java.time.LocalDateTime;
 
 public class TraderAgent implements BaseAgent {
 
+    private final ProfitabilityTracker tracker = new ProfitabilityTracker();
+
     @Override
     public MarketObservation observe() {
-        // Later: connect to NSE live API
-        return new MarketObservation(
-                "NSE",           // exchange
-                "HDFCBANK",      // symbol
-                1500.00,         // openPrice
-                1500.25,         // currentPrice
-                1520.00,         // high
-                1490.50          // low
-        );
-
+        return new MarketObservation("NSE", "HDFCBANK", 1500.00, 1505.25, 1520.00, 1490.50);
     }
 
     @Override
     public Plan plan(MarketObservation observation) {
-        // Placeholder logic: if price rises >1%, plan to sell
         String decision = observation.currentPrice() > observation.openPrice() * 1.01 ? "SELL" : "HOLD";
-        return new Plan(decision, "Momentum strategy");
+        return new Plan(decision, "Momentum Strategy");
     }
 
     @Override
     public Action act(Plan plan) {
-        System.out.println("Executing action: " + plan.decision());
+        if (plan.decision().equals("SELL")) {
+            double buy = 1500.00, sell = 1515.00;
+            double profit = sell - buy;
+            tracker.recordTrade(new TradeResult("HDFCBANK", buy, sell, profit, profit > 0, LocalDateTime.now()));
+        }
         return new Action(plan.decision(), true);
     }
 
     @Override
     public void learn(Action action) {
-        System.out.println("Learning from outcome of: " + action.decision());
+        tracker.printSummary();
     }
 }
