@@ -1,12 +1,14 @@
 package com.agenticai.stock.agent;
 
 import com.agenticai.stock.model.*;
+import com.agenticai.stock.repository.PortfolioRepository;
 import com.agenticai.stock.service.BrokerService;
 import com.agenticai.stock.service.MarketDataService;
 import com.agenticai.stock.service.ProfitabilityTracker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Component
@@ -16,11 +18,14 @@ public class TraderAgent implements BaseAgent {
 
     private final MarketDataService marketDataService;
     private final BrokerService brokerService;
+    private final PortfolioRepository portfolioRepository;
 
     @Autowired
-    public TraderAgent(MarketDataService marketDataService,BrokerService brokerService) {
+    public TraderAgent(MarketDataService marketDataService,BrokerService brokerService,
+                       PortfolioRepository portfolioRepository) {
         this.marketDataService = marketDataService;
         this.brokerService = brokerService;
+        this.portfolioRepository = portfolioRepository;
     }
 
     @Override
@@ -44,41 +49,47 @@ public class TraderAgent implements BaseAgent {
         IndexObservation nifty = marketDataService.getIndexData("NIFTY 50");
 
         String decision;
+        String strategy;
 
-        if (nifty.changePercent() > 0) {
-            // Market bullish → consider buying
-            decision = observation.currentPrice() < observation.openPrice() * 1.01 ? "BUY" : "HOLD";
+        // === Long-Term Investing Logic ===
+        if (observation.peRatio() < 25 && observation.dividendYield() > 2.0) {
+            decision = "BUY_FOR_LONG_TERM";
+            strategy = "LongTerm";
+        }
+        // === Short-term Trading Logic ===
+        else if (nifty.changePercent() > 0 && observation.currentPrice() < observation.openPrice() * 1.01) {
+            decision = "BUY";
+            strategy = "Trading";
+        } else if (nifty.changePercent() < 0 && observation.currentPrice() > observation.openPrice() * 1.01) {
+            decision = "SELL";
+            strategy = "Trading";
         } else {
-            // Market bearish → hold or sell
-            decision = observation.currentPrice() > observation.openPrice() * 1.01 ? "SELL" : "HOLD";
+            decision = "HOLD";
+            strategy = "Neutral";
         }
 
-        return new Plan(decision, "Index-aware strategy");
+        return new Plan(decision, strategy);
     }
 
     @Override
     public Action act(Plan plan) {
-        String symbol = "HDFCBANK";
-        double price = 1500.00; // mock for now
-        int quantity = 10;
-
-        if (plan.decision().equals("BUY") || plan.decision().equals("SELL")) {
-            // ✅ Create TradeOrder for broker
-            TradeOrder order = new TradeOrder(
-                    symbol,
-                    plan.decision(),
-                    quantity,
-                    price,
-                    LocalDateTime.now(),
-                    "ORD-" + System.currentTimeMillis()
-            );
-
-            // ✅ Execute via BrokerService
-            brokerService.placeOrder(order);
-
-            // ✅ Log profit simulation for learning
-            double profit = plan.decision().equals("SELL") ? 15.00 : 0.0;
-            tracker.recordTrade(new TradeResult(symbol, 1500.00, 1515.00, profit, profit > 0, LocalDateTime.now()));
+        switch (plan.decision()) {
+            case "BUY_FOR_LONG_TERM" -> {
+                InvestmentPortfolio p = new InvestmentPortfolio();
+                p.setSymbol("HDFCBANK");
+                p.setBuyPrice(1500.00);
+                p.setBuyDate(LocalDate.now());
+                p.setHoldingPeriodDays(365);
+                p.setStrategy("LongTerm");
+                portfolioRepository.save(p);
+                System.out.println("✅ Long-term investment added to portfolio: HDFCBANK");
+            }
+            case "SELL" -> {
+                double buy = 1500.00, sell = 1515.00;
+                double profit = sell - buy;
+                tracker.recordTrade(new TradeResult("HDFCBANK", buy, sell, profit, profit > 0, LocalDateTime.now()));
+            }
+            default -> System.out.println("⚙️ No trading action performed.");
         }
 
         return new Action(plan.decision(), true);
