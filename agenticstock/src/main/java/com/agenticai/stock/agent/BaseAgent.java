@@ -1,6 +1,8 @@
 package com.agenticai.stock.agent;
 
-import com.agenticai.stock.model.*;
+import com.agenticai.stock.model.Action;
+import com.agenticai.stock.model.MarketObservation;
+import com.agenticai.stock.model.Plan;
 
 public interface BaseAgent {
     MarketObservation observe();

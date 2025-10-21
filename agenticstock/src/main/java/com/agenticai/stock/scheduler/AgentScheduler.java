@@ -7,7 +7,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class AgentScheduler {
 
-    private final TraderAgent agent = new TraderAgent();
+    private final TraderAgent agent;
+
+    public AgentScheduler(TraderAgent agent) {
+        this.agent = agent; // Spring injects it automatically
+    }
 
     @Scheduled(fixedRate = 60000) // every minute
     public void runAgentCycle() {
