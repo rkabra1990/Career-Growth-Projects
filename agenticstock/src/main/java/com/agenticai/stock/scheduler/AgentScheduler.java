@@ -20,4 +20,11 @@ public class AgentScheduler {
         var act = agent.act(plan);
         agent.learn(act);
     }
+
+    @Scheduled(fixedRate = 300000) // every 5 minutes
+    public void checkIntradayPositions() {
+        // In real scenario: check live price, if target/SL hit → close trade
+        // For now, just print placeholder
+        System.out.println("🔁 Checking intraday positions...");
+    }
 }

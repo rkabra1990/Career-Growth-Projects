@@ -4,8 +4,10 @@ public record MarketObservation(
         String symbol,
         double openPrice,
         double currentPrice,
-        double high,
-        double low,
+        double highPrice,
+        double lowPrice,
+        double volume,
         double peRatio,
-        double dividendYield
+        double dividendYield,
+        double changePercent // <-- added field
 ) {}
