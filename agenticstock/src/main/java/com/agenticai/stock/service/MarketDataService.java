@@ -1,5 +1,6 @@
 package com.agenticai.stock.service;
 
+import com.agenticai.stock.model.FundamentalData;
 import com.agenticai.stock.model.IndexObservation;
 import com.agenticai.stock.model.MarketObservation;
 import org.springframework.beans.factory.annotation.Value;
@@ -78,5 +79,9 @@ public class MarketDataService {
             if (val instanceof String s) return Double.parseDouble(s);
         } catch (Exception ignored) {}
         return 0.0;
+    }
+    public FundamentalData getFundamentalData(String symbol) {
+        // Mock data - replace with API fetch later
+        return new FundamentalData(symbol, 18.5, 2.3, 17.8, 45.2, 0.4, 2.1);
     }
 }

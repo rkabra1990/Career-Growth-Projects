@@ -47,14 +47,15 @@ public class TraderAgent implements BaseAgent {
     @Override
     public Plan plan(MarketObservation observation) {
         IndexObservation nifty = marketDataService.getIndexData("NIFTY 50");
+        FundamentalData fa = marketDataService.getFundamentalData("HDFCBANK");
 
         String decision;
         String strategy;
 
-        // === Long-Term Investing Logic ===
-        if (observation.peRatio() < 25 && observation.dividendYield() > 2.0) {
+        // 🧮 Long-Term Investing Logic (Fundamental Analysis)
+        if (fa.peRatio() < 25 && fa.roe() > 15 && fa.debtToEquity() < 1 && fa.dividendYield() > 2) {
             decision = "BUY_FOR_LONG_TERM";
-            strategy = "LongTerm";
+            strategy = "Fundamental";
         }
         // === Intraday Logic (Topic 7) ===
         else if (isIntradayWindow() && Math.abs(observation.changePercent()) > 0.5) {
@@ -115,33 +116,52 @@ public class TraderAgent implements BaseAgent {
         String symbol = "HDFCBANK";
         MarketObservation obs = marketDataService.getLiveData(symbol).block();
 
-        double current = obs.currentPrice();
-        double stopLoss = current * (action.equals("INTRADAY_BUY") ? 0.995 : 1.005);
-        double target = current * (action.equals("INTRADAY_BUY") ? 1.01 : 0.99);
+        double entryPrice = obs.currentPrice();
+        double stopLoss = entryPrice * (action.equals("INTRADAY_BUY") ? 0.995 : 1.005);
+        double target = entryPrice * (action.equals("INTRADAY_BUY") ? 1.01 : 0.99);
 
-        IntradayTrade trade = new IntradayTrade(
-                symbol,
-                current,
-                0,
-                stopLoss,
-                target,
-                action.equals("INTRADAY_BUY") ? "BUY" : "SELL",
-                LocalDateTime.now(),
+        // Place entry order
+        TradeOrder entryOrder = new TradeOrder(
                 null,
-                "OPEN"
+                symbol,
+                action.equals("INTRADAY_BUY") ? "BUY" : "SELL",
+                "MARKET",
+                entryPrice,
+                10,
+                "EXECUTED",
+                LocalDateTime.now()
         );
+        brokerService.placeOrder(entryOrder);
 
-        System.out.printf("📊 %s %s Intraday Entry @ %.2f | Target: %.2f | SL: %.2f%n",
-                symbol, action, current, target, stopLoss);
+        System.out.printf("📊 %s Entry @ %.2f | Target: %.2f | SL: %.2f%n",
+                symbol, entryPrice, target, stopLoss);
 
-        // Mock broker order
-        brokerService.placeOrder(
-                new TradeOrder(symbol,
-                        action.equals("INTRADAY_BUY") ? "BUY" : "SELL",
-                        25,
-                        current,
-                        LocalDateTime.now(),
-                        "INTRA-" + System.currentTimeMillis())
+        // Simulate price move (for paper trading)
+        boolean hitTarget = Math.random() > 0.4;
+        double exitPrice = hitTarget ? target : stopLoss;
+        String exitAction = action.equals("INTRADAY_BUY") ? "SELL" : "BUY";
+
+        // Place exit order
+        TradeOrder exitOrder = new TradeOrder(
+                null,
+                symbol,
+                exitAction,
+                "MARKET",
+                exitPrice,
+                10,
+                "EXECUTED",
+                LocalDateTime.now()
         );
+        brokerService.placeOrder(exitOrder);
+
+        double profit = action.equals("INTRADAY_BUY")
+                ? (exitPrice - entryPrice) * 10
+                : (entryPrice - exitPrice) * 10;
+
+        tracker.recordTrade(new TradeResult(symbol, entryPrice, exitPrice, profit, profit > 0, LocalDateTime.now()));
+
+        System.out.printf("💰 Intraday %s Trade Complete | Entry: %.2f Exit: %.2f | Profit: %.2f%n",
+                action, entryPrice, exitPrice, profit);
     }
+
 }
