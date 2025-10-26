@@ -1,0 +1,35 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: intraday-agentic
+  main:
+    allow-bean-definition-overriding: true
+
+# === Agentic AI LLM configuration ===
+agentic:
+  llm:
+    api-url: "https://api.openai.com/v1/chat/completions"
+    api-key-env: "your_api_key_here"       # Replace with your actual or dummy key
+    model: "gpt-4o-mini"
+
+# === Market configuration for Indian NSE ===
+market:
+  name: "NSE"
+  timezone: "Asia/Kolkata"
+  trading-hours:
+    open: "09:15"
+    close: "15:30"
+  squareoff-time: "15:25"
+  symbols:
+    - "NIFTY50"
+    - "BANKNIFTY"
+    - "RELIANCE"
+    - "TCS"
+    - "INFY"
+    - "HDFCBANK"
+    - "SBIN"
+    - "ICICIBANK"
+    - "AXISBANK"
+    - "LT"
